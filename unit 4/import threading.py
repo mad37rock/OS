@@ -1,44 +1,28 @@
 import threading
 import queue
-import random
 import time
 
-class Producer(threading.Thread):
-    def __init__(self, queue):
-        threading.Thread.__init__(self)
-        self.queue = queue
+def producer(q):
+    for i in range(10):
+        print('Produced', i)
+        q.put(i)
+        time.sleep(1)
 
-    def run(self):
-        for _ in range(10):
-            item = random.randint(0, 256)
-            self.queue.put(item)
-            print('Producer notify : item %d appended to queue by %s\n' % (item, self.name))
-            time.sleep(1)
+def consumer(q):
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        print('Consumed', item)
+        q.task_done()
 
+q = queue.Queue()
+t1 = threading.Thread(target=producer, args=(q,))
+t2 = threading.Thread(target=consumer, args=(q,))
 
-class Consumer(threading.Thread):
-    def __init__(self, queue):
-        threading.Thread.__init__(self)
-        self.queue = queue
+t1.start()
+t2.start()
 
-    def run(self):
-        while True:
-            item = self.queue.get()
-            print('Consumer notify : %d popped from queue by %s' % (item, self.name))
-            self.queue.task_done()
-
-
-if __name__ == '__main__':
-    queue = queue.Queue()
-    t1 = Producer(queue)
-    t2 = Consumer(queue)
-    t3 = Consumer(queue)
-    t4 = Consumer(queue)
-    t1.start()
-    t2.start()
-    t3.start()
-    t4.start()
-    t1.join()
-    t2.join()
-    t3.join()
-    t4.join()
+t1.join()
+q.put(None)  # Signal the consumer to exit
+t2.join()
